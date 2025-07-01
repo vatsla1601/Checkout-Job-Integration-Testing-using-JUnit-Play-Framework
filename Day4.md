@@ -139,3 +139,48 @@ Edit
 @Mapping(target = "id_str", ignore = true)
 If you're not using or mapping it, and just ignoring it — removing the line entirely is safest.
 
+If you add @SuperBuilder (from Lombok) to all parent classes (e.g., BaseMasterDTO, PersonDTO, and then VisitorDTO), here’s exactly what will happen:
+
+✅ What @SuperBuilder Does
+@SuperBuilder is Lombok's solution for builder pattern with inheritance.
+
+Unlike @Builder, which only supports flat classes, @SuperBuilder:
+
+Generates builder classes that support inherited fields
+
+Ensures you can build a child class while also setting values from the parent
+
+Supports method chaining across parent and child builders
+
+🧱 Example
+📦 If you do this:
+java
+Copy
+Edit
+@SuperBuilder
+public class BaseMasterDTO {
+    private Long id;
+}
+
+@SuperBuilder
+public class PersonDTO extends BaseMasterDTO {
+    private String name;
+}
+
+@SuperBuilder
+public class VisitorDTO extends PersonDTO {
+    private String masterId;
+}
+✅ You can then write:
+java
+Copy
+Edit
+VisitorDTO visitor = VisitorDTO.builder()
+    .id(123L)                // inherited from BaseMasterDTO
+    .name("John Doe")        // from PersonDTO
+    .masterId("vatsla.adhikari")  // from VisitorDTO
+    .build();
+So now all fields across the hierarchy are included in the builder.
+
+
+
