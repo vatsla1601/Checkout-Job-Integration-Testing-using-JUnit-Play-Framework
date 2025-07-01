@@ -358,5 +358,102 @@ v2.setName("Alice");
 System.out.println(v1.equals(v2));  // ✅ true
 System.out.println(v1.hashCode() == v2.hashCode());  // ✅ true
 
+“How was this method working earlier — before I added @Builder or @SuperBuilder — even though I wrote BaseDTOBuilder<?, ?> userDTO = BaseDTO.builder(); and returned userDTO.build() as a UserDTO?”
+
+✅ TL;DR: It was working because Lombok was not generating the builder, so the compiler didn't know (or care) what type userDTO.build() actually returned — or you had a custom hand-written builder that returned the correct type.
+Let’s break it down:
+
+🧠 What was happening earlier?
+You likely had no builder annotations like @Builder or @SuperBuilder on either BaseDTO or UserDTO.
+
+So this line:
+
+java
+Copy
+Edit
+BaseDTOBuilder<?, ?> userDTO = BaseDTO.builder();
+Either:
+
+✅ Option 1: Didn't compile before — but you didn't use it yet
+Maybe this method was:
+
+Not used yet,
+
+Incomplete,
+
+Or you had it coded but not part of a build-verified flow.
+
+So the problem only showed up now that you added @SuperBuilder, which made types strict and generated the builder method — now the compiler can validate the mismatch.
+
+✅ Option 2: You had a hand-written static builder method in BaseDTO
+Something like:
+
+java
+Copy
+Edit
+public static BaseDTOBuilder builder() {
+    return new UserDTOBuilder(); // manually returning UserDTO builder
+}
+This would compile fine and return the correct type (UserDTO), even though the method was written in BaseDTO.
+
+But once you added @SuperBuilder, Lombok overwrites or generates its own static builder() methods — and now the return type is fixed to BaseDTOBuilder, which builds only a BaseDTO.
+
+That breaks the chain if you were relying on returning UserDTO later.
+
+✅ What @SuperBuilder changed
+When you added:
+
+java
+Copy
+Edit
+@SuperBuilder
+public class BaseDTO { ... }
+
+@SuperBuilder
+public class UserDTO extends BaseDTO { ... }
+Now Lombok generates:
+
+BaseDTO.builder() → returns BaseDTO.BaseDTOBuilder<?, ?>
+
+UserDTO.builder() → returns UserDTO.UserDTOBuilder<?, ?>
+
+So:
+
+java
+Copy
+Edit
+BaseDTO.builder().build(); // returns a BaseDTO ❌
+UserDTO.builder().build(); // returns a UserDTO ✅
+But your code still does:
+
+java
+Copy
+Edit
+BaseDTOBuilder<?, ?> userDTO = BaseDTO.builder();
+...
+return userDTO.build(); // ❌ trying to return BaseDTO where UserDTO is expected
+Hence the error:
+
+pgsql
+Copy
+Edit
+incompatible types: capture#36 of ? cannot be converted to com.alnt.access.user.domain.dto.UserDTO
+✅ Fix: Use the specific class’s builder
+Just change:
+
+java
+Copy
+Edit
+BaseDTOBuilder<?, ?> userDTO = BaseDTO.builder();
+To:
+
+java
+Copy
+Edit
+UserDTO.UserDTOBuilder<?, ?> userDTO = UserDTO.builder();
+Now userDTO.build() returns the correct type: UserDTO.
+
+
+
 
 
