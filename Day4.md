@@ -182,5 +182,181 @@ VisitorDTO visitor = VisitorDTO.builder()
     .build();
 So now all fields across the hierarchy are included in the builder.
 
+⚙️ What Happens With Lombok’s @EqualsAndHashCode (Without callSuper = true)
+When you write:
+
+java
+Copy
+Edit
+@Data
+@EqualsAndHashCode // (implicitly callSuper = false)
+public class VisitorDTO extends BaseDTO {
+    private String name;
+}
+Lombok generates equals() and hashCode() only using the fields defined in VisitorDTO, which is:
+
+java
+Copy
+Edit
+private String name;
+It ignores inherited fields like id from BaseDTO, because callSuper = false by default.
+
+🔍 So yes:
+It checks name ✅
+
+It does not check id ❌ (because id is in the superclass)
+
+🧪 Concrete Example
+👨‍👧 Classes:
+java
+Copy
+Edit
+public class BaseDTO {
+    private String id;
+    // Getters and setters...
+}
+
+@Data
+@EqualsAndHashCode // 👈 callSuper = false
+public class VisitorDTO extends BaseDTO {
+    private String name;
+}
+🧪 Test code:
+java
+Copy
+Edit
+VisitorDTO v1 = new VisitorDTO();
+v1.setId("123");     // from BaseDTO
+v1.setName("Alice");
+
+VisitorDTO v2 = new VisitorDTO();
+v2.setId("456");     // different ID!
+v2.setName("Alice"); // same name
+🧾 Result:
+java
+Copy
+Edit
+System.out.println(v1.equals(v2)); // ✅ true!
+This may surprise you, but it’s because:
+
+equals() only checks name, not id
+
+Both v1 and v2 have name = "Alice"
+
+So they’re considered equal, even though their ids are different — which could be a logic bug.
+
+✅ Fix: Add callSuper = true
+java
+Copy
+Edit
+@EqualsAndHashCode(callSuper = true)
+Now equals() will also call super.equals(), which (if overridden properly or inherited from Lombok-generated code) includes id, making:
+
+java
+Copy
+Edit
+System.out.println(v1.equals(v2)); // ❌ false
+Which is correct, since their ids are different.
+
+💡 What are equals() and hashCode()?
+In Java:
+
+equals() checks if two objects are "logically equal".
+
+hashCode() returns an integer used by hash-based collections (like HashMap, HashSet) to organize objects efficiently.
+
+Together, they define how objects are compared and stored.
+
+📌 Real-Life Analogy
+Imagine two visitor badges:
+
+java
+Copy
+Edit
+VisitorDTO v1 = new VisitorDTO("123", "Alice");
+VisitorDTO v2 = new VisitorDTO("123", "Alice");
+You want Java to say:
+
+java
+Copy
+Edit
+v1.equals(v2) => true
+Because they represent the same logical visitor — even if they're different objects in memory.
+
+✅ equals() – Checks content equality
+Example:
+
+java
+Copy
+Edit
+VisitorDTO v1 = new VisitorDTO("123", "Alice");
+VisitorDTO v2 = new VisitorDTO("123", "Alice");
+
+System.out.println(v1.equals(v2)); // true
+But without overriding equals(), it will default to memory address comparison — meaning:
+
+java
+Copy
+Edit
+v1 == v2 => false (always, unless same object)
+Overriding equals() lets Java check field values instead.
+
+✅ hashCode() – Used in collections
+java
+Copy
+Edit
+HashSet<VisitorDTO> set = new HashSet<>();
+set.add(v1);
+set.add(v2); // This won't be added if equals() and hashCode() work properly
+
+System.out.println(set.size()); // Should be 1 if v1.equals(v2) == true
+Without correct hashCode() override, Java thinks they're different.
+
+❌ Problem if you override only one
+Java’s contract:
+
+If a.equals(b) is true, then a.hashCode() == b.hashCode() must also be true.
+
+If you override equals() but not hashCode(), weird bugs happen in collections like HashMap, HashSet.
+
+✅ With Lombok
+If you use:
+
+java
+Copy
+Edit
+@Data
+@EqualsAndHashCode(callSuper = true)
+Lombok generates equals() and hashCode() based on all fields — including parent fields.
+
+🧪 Example: BaseDTO + VisitorDTO
+java
+Copy
+Edit
+public class BaseDTO {
+    private String id;
+}
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class VisitorDTO extends BaseDTO {
+    private String name;
+}
+Now:
+
+java
+Copy
+Edit
+VisitorDTO v1 = new VisitorDTO();
+v1.setId("123");
+v1.setName("Alice");
+
+VisitorDTO v2 = new VisitorDTO();
+v2.setId("123");
+v2.setName("Alice");
+
+System.out.println(v1.equals(v2));  // ✅ true
+System.out.println(v1.hashCode() == v2.hashCode());  // ✅ true
+
 
 
