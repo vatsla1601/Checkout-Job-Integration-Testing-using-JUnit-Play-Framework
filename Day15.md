@@ -280,4 +280,3 @@ This makes them readable by AOP via reflection.
 
 ---
 
-Let me know if you'd like a **diagram**, flowchart, or **code walkthrough GIF** to go with this README!
